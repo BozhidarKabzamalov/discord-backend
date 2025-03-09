@@ -1,12 +1,12 @@
 import bodyParser from 'body-parser';
 import express from "express";
 
-import router from './routes/index.js';
+import userRoutes from "./routes/userRoutes";
 
 const app = express();
 
 app.use(bodyParser.json());
 
-app.use(router);
+app.use(userRoutes);
 
 app.listen(3000);
