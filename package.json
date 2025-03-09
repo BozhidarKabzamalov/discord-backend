@@ -1,0 +1,32 @@
+{
+	"name": "discord-backend",
+	"version": "1.0.0",
+	"main": "app.js",
+	"type": "module",
+	"imports": {
+	    "#*": "./src/*"
+	},
+	"scripts": {
+		"dev": "tsx --watch src/app.ts",
+		"start": "node dist/app.js",
+		"build": "tsc",
+		"test": "echo \"Error: no test specified\" && exit 1"
+	},
+	"dependencies": {
+		"body-parser": "1.20.3",
+		"express": "4.21.2"
+	},
+	"devDependencies": {
+		"@eslint/js": "9.22.0",
+		"@tsconfig/node22": "^22.0.0",
+		"@types/body-parser": "1.19.5",
+		"@types/express": "^5.0.0",
+		"@types/node": "^22.13.10",
+		"eslint": "9.22.0",
+		"eslint-plugin-perfectionist": "4.10.1",
+		"prettier": "3.5.3",
+		"tsx": "4.19.3",
+		"typescript": "^5.8.2",
+		"typescript-eslint": "8.26.0"
+	}
+}
