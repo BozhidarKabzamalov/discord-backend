@@ -1,11 +1,10 @@
 import { Router} from "express";
 
+import { loginUser, registerUser } from "../controllers/userController";
+
 const router = Router();
 
-const users = ["Bozhidar", "George"]
-
-router.get("/", (req, res, next) => {
-    res.status(200).json({ users });
-});
+router.post("/register", registerUser);
+router.post('/login', loginUser);
 
 export default router;
