@@ -1,79 +1,117 @@
-import bcryptjs from 'bcryptjs';
+import bcrypt from "bcryptjs";
 import { Request, Response } from "express";
-import jwt from 'jsonwebtoken';
+import jwt from "jsonwebtoken";
 
-import User from '../models/User';
+import User from "../models/User";
 
-export const registerUser = async (req: Request, res: Response) => {
-	const username = req.body.username;
-	const email = req.body.email;
-	const password = await bcryptjs.hash(req.body.password, 12);
+interface loginUserRequestBodyType {
+	email: string;
+	password: string;
+}
 
-	const userExists = await User.findOne({
-		where: {
-			email: email,
-		},
-	});
+interface registerUserRequestBodyType extends loginUserRequestBodyType {
+	username: string;
+}
 
-	if (!userExists) {
+export const registerUser = async (
+	req: Request<null, null, registerUserRequestBodyType>,
+	res: Response,
+) => {
+	try {
+		const { email, password, username } = req.body;
+
+		if (!username || !email || !password) {
+			res.status(400).json({ error: "All fields are required" });
+		}
+
+		const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+		if (!emailRegex.test(email)) {
+			res.status(400).json({ error: "Invalid email format" });
+		}
+
+		const hashedPassword = await bcrypt.hash(password, 12);
+
+		const userAlreadyExists = await User.findOne({
+			where: {
+				email,
+			},
+		});
+
+		if (userAlreadyExists) {
+			res.status(409).json({
+				error: "User already exists",
+			});
+            return;
+		}
+
 		const user = await User.create({
 			email: email,
-			password: password,
+			password: hashedPassword,
 			username: username,
 		});
 
 		const token = jwt.sign({ email: user.email, id: user.id }, "secretkey");
-		res.status(200).json({
+
+		res.status(201).json({
+			message: "User registered successfully",
 			user: {
 				id: user.id,
-				image: user.image,
 				token: token,
 				username: user.username,
 			},
 		});
-	} else {
-		res.status(401).json({
-			message: "Authentication failed",
-		});
+	} catch {
+		res.status(500).json({ error: "Something went wrong" });
 	}
 };
 
-export const loginUser = (req: Request, res: Response) => {
-    res.status(200);
+export const loginUser = async (
+	req: Request<null, null, loginUserRequestBodyType>,
+	res: Response
+) => {
+	try {
+		const { email, password } = req.body;
+
+		if (!email || !password) {
+			res.status(400).json({ error: "All fields are required" });
+		}
+
+		const userExists = await User.findOne({
+			where: {
+				email: email,
+			},
+		});
+
+		if (!userExists) {
+			res.status(401).json({
+				message: "Authentication failed",
+			});
+            return;
+		}
+
+		const isMatch = await bcrypt.compare(password, userExists.password);
+
+		if (!isMatch) {
+			res.status(401).json({
+				message: "Authentication failed",
+			});
+		}
+
+		const token = jwt.sign(
+			{ email: userExists.email, id: userExists.id },
+			"secretkey"
+		);
+
+		res.status(200).json({
+			user: {
+				email: userExists.email,
+				id: userExists.id,
+				token: token,
+				username: userExists.username,
+			},
+		});
+	} catch {
+		res.status(500).json({ error: "Something went wrong" });
+	}
 };
-
-/*const loginUser = async (req, res, next) => {
-    const email = req.body.email
-    const password = req.body.password
-
-    const userExists = await User.findOne({
-        where: {
-            email: email
-        }
-    })
-
-    if (userExists) {
-        bcrypt.compare(password, userExists.password, (error, result) => {
-            if (result) {
-                const token = jwt.sign({ email: userExists.email, id: userExists.id }, 'secretkey')
-                res.status(200).json({
-                    user: {
-                        id: userExists.id,
-                        image: userExists.image,
-                        token: token,
-                        username: userExists.username
-                    }
-                })
-            } else {
-                res.status(401).json({
-                    message: 'Authentication failed'
-                })
-            }
-        })
-    } else {
-        res.status(401).json({
-            message: 'Authentication failed'
-        })
-    }
-
-}*/
