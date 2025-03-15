@@ -2,12 +2,12 @@ import { DataTypes, Model } from "sequelize";
 
 import dbConnection from "../utils/database";
 
-class Server extends Model {
+class Role extends Model {
 	declare id: number;
-	declare name: string;
+	declare name: "admin" | "member" | "owner";
 }
 
-Server.init(
+Role.init(
 	{
 		id: {
 			allowNull: false,
@@ -17,13 +17,13 @@ Server.init(
 		},
 		name: {
 			allowNull: false,
-			type: DataTypes.STRING,
+			type: DataTypes.ENUM("owner", "admin", "member"),
 		},
 	},
 	{
-		modelName: "Server",
+		modelName: "Role",
 		sequelize: dbConnection,
 	}
 );
 
-export default Server;
+export default Role;

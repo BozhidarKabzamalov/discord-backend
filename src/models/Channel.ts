@@ -2,12 +2,13 @@ import { DataTypes, Model } from "sequelize";
 
 import dbConnection from "../utils/database";
 
-class Server extends Model {
+class Channel extends Model {
 	declare id: number;
 	declare name: string;
+    declare type: "text" | "voice"
 }
 
-Server.init(
+Channel.init(
 	{
 		id: {
 			allowNull: false,
@@ -19,11 +20,15 @@ Server.init(
 			allowNull: false,
 			type: DataTypes.STRING,
 		},
+		type: {
+			allowNull: false,
+			type: DataTypes.ENUM("text", "voice"),
+		},
 	},
 	{
-		modelName: "Server",
+		modelName: "Channel",
 		sequelize: dbConnection,
 	}
 );
 
-export default Server;
+export default Channel;
