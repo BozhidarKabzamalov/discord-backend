@@ -15,19 +15,19 @@ interface registerUserRequestBodyType extends loginUserRequestBodyType {
 
 export const registerUser = async (
 	req: Request<null, null, registerUserRequestBodyType>,
-	res: Response,
+	res: Response
 ) => {
 	try {
 		const { email, password, username } = req.body;
 
 		if (!username || !email || !password) {
-			res.status(400).json({ error: "All fields are required" });
+			return res.status(400).json({ error: "All fields are required" });
 		}
 
 		const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 		if (!emailRegex.test(email)) {
-			res.status(400).json({ error: "Invalid email format" });
+			return res.status(400).json({ error: "Invalid email format" });
 		}
 
 		const hashedPassword = await bcrypt.hash(password, 12);
@@ -39,10 +39,9 @@ export const registerUser = async (
 		});
 
 		if (userAlreadyExists) {
-			res.status(409).json({
+			return res.status(409).json({
 				error: "User already exists",
 			});
-            return;
 		}
 
 		const user = await User.create({
@@ -53,7 +52,7 @@ export const registerUser = async (
 
 		const token = jwt.sign({ email: user.email, id: user.id }, "secretkey");
 
-		res.status(201).json({
+		return res.status(201).json({
 			message: "User registered successfully",
 			user: {
 				id: user.id,
@@ -61,8 +60,9 @@ export const registerUser = async (
 				username: user.username,
 			},
 		});
-	} catch {
-		res.status(500).json({ error: "Something went wrong" });
+	} catch (error) {
+		console.log(error);
+		return res.status(500).json({ message: "Internal server error" });
 	}
 };
 
@@ -74,7 +74,7 @@ export const loginUser = async (
 		const { email, password } = req.body;
 
 		if (!email || !password) {
-			res.status(400).json({ error: "All fields are required" });
+			return res.status(400).json({ error: "All fields are required" });
 		}
 
 		const userExists = await User.findOne({
@@ -84,16 +84,15 @@ export const loginUser = async (
 		});
 
 		if (!userExists) {
-			res.status(401).json({
+			return res.status(401).json({
 				message: "Authentication failed",
 			});
-            return;
 		}
 
 		const isMatch = await bcrypt.compare(password, userExists.password);
 
 		if (!isMatch) {
-			res.status(401).json({
+			return res.status(401).json({
 				message: "Authentication failed",
 			});
 		}
@@ -103,7 +102,7 @@ export const loginUser = async (
 			"secretkey"
 		);
 
-		res.status(200).json({
+		return res.status(200).json({
 			user: {
 				email: userExists.email,
 				id: userExists.id,
@@ -111,7 +110,8 @@ export const loginUser = async (
 				username: userExists.username,
 			},
 		});
-	} catch {
-		res.status(500).json({ error: "Something went wrong" });
+	} catch (error) {
+		console.log(error);
+		return res.status(500).json({ message: "Internal server error" });
 	}
 };

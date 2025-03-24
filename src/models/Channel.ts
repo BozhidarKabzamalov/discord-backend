@@ -5,7 +5,8 @@ import dbConnection from "../utils/database";
 class Channel extends Model {
 	declare id: number;
 	declare name: string;
-    declare type: "text" | "voice"
+    declare serverId: number;
+    declare type: "text" | "voice";
 }
 
 Channel.init(
@@ -19,6 +20,12 @@ Channel.init(
 		name: {
 			allowNull: false,
 			type: DataTypes.STRING,
+		},
+		serverId: {
+			allowNull: false,
+			onDelete: "CASCADE",
+			references: { key: "id", model: "Servers" },
+			type: DataTypes.INTEGER,
 		},
 		type: {
 			allowNull: false,

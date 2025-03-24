@@ -1,54 +1,212 @@
 import { Request, Response } from "express";
 
+import Channel from "../models/Channel";
 import Membership from "../models/Membership";
 import Role from "../models/Role";
 import Server from "../models/Server";
+import User from "../models/User";
 
-interface createServerRequestBodyType {
-    name: string;
+interface createUpdateServerRequestBodyType {
+	name: string;
 }
 
 export const createServer = async (
-	req: Request<null, null, createServerRequestBodyType>,
+	req: Request<null, null, createUpdateServerRequestBodyType> & {
+		userId: string;
+	},
 	res: Response
 ) => {
 	try {
 		const { name } = req.body;
-        const ownerId = req.user.id;
+		const ownerId = req.userId;
 
 		if (!name) {
-			res.status(400).json({ message: "Server name is required" });
-            return;
+			return res.status(400).json({ message: "Server name is required" });
 		}
 
 		if (!ownerId) {
-			res.status(401).json({ message: "Unauthorized" });
-            return;
+			return res.status(401).json({ message: "Unauthorized" });
 		}
 
 		const newServer = await Server.create({ name, ownerId });
 
-		const adminRole = await Role.findOne({ where: { name: "admin" } });
+		await Channel.bulkCreate([
+			{ name: "general", serverId: newServer.id, type: "text" },
+			{ name: "general", serverId: newServer.id, type: "voice" },
+		]);
 
-		if (!adminRole) {
-			res.status(500).json({
+		const ownerRole = await Role.findOne({ where: { name: "owner" } });
+
+		if (!ownerRole) {
+			return res.status(500).json({
 				message: "Admin role not found. Please seed roles first.",
 			});
-            return;
 		}
 
 		await Membership.create({
-			roleId: adminRole.id,
+			roleId: ownerRole.id,
 			serverId: newServer.id,
 			userId: ownerId,
 		});
 
-		res.status(201).json({
+		return res.status(201).json({
 			message: "Server created successfully",
 			server: newServer,
 		});
 	} catch (error) {
-        console.log(error)
-		res.status(500).json({ message: "Internal server error" });
+		console.log(error);
+		return res.status(500).json({ message: "Internal server error" });
+	}
+};
+
+export const joinServer = async (
+	req: Request<{ serverId: number }> & {
+		userId: string;
+	},
+	res: Response
+) => {
+	try {
+		const { serverId } = req.params;
+		const userId = req.userId;
+
+		if (!serverId) {
+			return res.status(400).json({
+				message: "Server Id is required",
+			});
+		}
+
+		if (!userId) {
+			return res.status(401).json({ message: "Unauthorized" });
+		}
+
+		const user = await User.findByPk(userId);
+
+		if (!user) {
+			return res.status(400).json({ message: "User not found" });
+		}
+
+		const server = await Server.findByPk(serverId);
+
+		if (!server) {
+			return res.status(400).json({ message: "Server not found" });
+		}
+
+		const memberRole = await Role.findOne({
+			where: { name: "member" },
+		});
+
+		if (!memberRole) {
+			return res.status(500).json({
+				message: "Admin role not found. Please seed roles first.",
+			});
+		}
+
+		const existingMembership = await Membership.findOne({
+			where: { serverId: server.id, userId },
+		});
+
+		if (existingMembership) {
+			return res.status(400).json({
+				message: "User is already a member of this server",
+			});
+		}
+
+		await Membership.create({
+			roleId: memberRole.id,
+			serverId: server.id,
+			userId,
+		});
+	} catch (error) {
+		console.log(error);
+		return res.status(500).json({ message: "Internal server error" });
+	}
+};
+
+export const leaveServer = async (
+	req: Request<{ serverId: number }> & {
+		userId: string;
+	},
+	res: Response
+) => {
+	const { serverId } = req.params;
+	const userId = req.userId;
+
+	try {
+		const membership = await Membership.findOne({
+			where: { serverId, userId },
+		});
+		if (!membership) {
+			return res.status(404).json({
+				message: "User is not a member of this server",
+			});
+		}
+
+		await membership.destroy();
+
+		return res.status(200).json({ message: "User has left the server" });
+	} catch (error) {
+		console.log(error);
+		return res.status(500).json({ message: "Internal server error" });
+	}
+};
+
+export const deleteServer = async (
+	req: Request<{ serverId: number }> & {
+		userId: string;
+	},
+	res: Response
+) => {
+	const { serverId } = req.params;
+
+	try {
+		const server = await Server.findByPk(serverId);
+
+		if (!server) {
+			return res.status(404).json({ message: "Server not found" });
+		}
+
+		await Membership.destroy({ where: { serverId } });
+
+		await server.destroy();
+
+		return res.status(200).json({ message: "Server has been deleted" });
+	} catch (error) {
+		console.log(error);
+		return res.status(500).json({ message: "Internal server error" });
+	}
+};
+
+export const updateServer = async (
+	req: Request<
+		{ serverId: number },
+		null,
+		createUpdateServerRequestBodyType
+	> & {
+		userId: string;
+	},
+	res: Response
+) => {
+	try {
+		const { serverId } = req.params;
+		const { name } = req.body;
+
+		if (!name) {
+			return res.status(400).json({
+				message: "Server name is required",
+			});
+		}
+
+		const server = await Server.findByPk(serverId);
+
+		if (!server) {
+			return res.status(404).json({ message: "Server not found" });
+		}
+
+		await server.update({ name });
+
+		return res.status(200).json({ server });
+	} catch (error) {
+		console.log(error);
+		return res.status(500).json({ message: "Internal server error" });
 	}
 };
