@@ -24,10 +24,6 @@ export const createServer = async (
 			return res.status(400).json({ message: "Server name is required" });
 		}
 
-		if (!ownerId) {
-			return res.status(401).json({ message: "Unauthorized" });
-		}
-
 		const newServer = await Server.create({ name, ownerId });
 
 		await Channel.bulkCreate([
@@ -128,13 +124,14 @@ export const leaveServer = async (
 	},
 	res: Response
 ) => {
-	const { serverId } = req.params;
-	const userId = req.userId;
-
 	try {
+		const { serverId } = req.params;
+		const userId = req.userId;
+
 		const membership = await Membership.findOne({
 			where: { serverId, userId },
 		});
+
 		if (!membership) {
 			return res.status(404).json({
 				message: "User is not a member of this server",

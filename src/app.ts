@@ -1,7 +1,9 @@
 import bodyParser from "body-parser";
+import cors from "cors";
 import express from "express";
 
 import Channel from "./models/Channel";
+import ChannelMessage from "./models/ChannelMessage";
 import Membership from "./models/Membership";
 import Role from "./models/Role";
 import Server from "./models/Server";
@@ -13,6 +15,7 @@ import dbConnection from "./utils/database";
 const app = express();
 
 app.use(bodyParser.json());
+app.use(cors());
 
 app.use(userRoutes);
 app.use(serverRoutes);
@@ -36,5 +39,8 @@ Membership.belongsTo(Server, { foreignKey: "serverId" });
 
 Role.hasMany(Membership, { foreignKey: "roleId" });
 Membership.belongsTo(Role, { foreignKey: "roleId" });
+
+Channel.hasMany(ChannelMessage, { foreignKey: 'channelId' })
+ChannelMessage.belongsTo(Channel, { foreignKey: "channelId" });
 
 //dbConnection.sync({ force: true });

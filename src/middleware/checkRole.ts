@@ -24,7 +24,7 @@ const checkRole = (allowedRoles: string[]) => {
 				where: { serverId, userId },
 			});
 
-			if (!membership || !allowedRoles.includes(membership.role.name)) {
+			if (!membership || !allowedRoles.includes(membership.Role.name)) {
 				return res.status(403).json({
 					message: "Forbidden: Insufficient permissions",
 				});
