@@ -1,9 +1,9 @@
 import { Router } from "express";
 
-import { createChannelMessage, deleteChannelMessage, getChannelMessages, updateChannelMessage } from "../controllers/ChannelMessageController";
 import {
 	createServer,
 	deleteServer,
+	getServersForUser,
 	joinServer,
 	leaveServer,
 	updateServer,
@@ -13,6 +13,7 @@ import checkRole from "../middleware/checkRole";
 
 const router = Router();
 
+router.get("/servers", authenticated, getServersForUser);
 router.post("/servers", authenticated, createServer);
 router.post("/servers/:serverId/join", authenticated, joinServer);
 router.post(
@@ -32,34 +33,6 @@ router.put(
 	authenticated,
 	checkRole(["owner", "admin"]),
 	updateServer
-);
-
-router.post(
-	"/servers/:serverId/channels/:channelId/messages",
-	authenticated,
-	checkRole(["owner", "admin", "member"]),
-	createChannelMessage
-);
-
-router.get(
-	"/servers/:serverId/channels/:channelId/messages",
-	authenticated,
-	checkRole(["owner", "admin", "member"]),
-	getChannelMessages
-);
-
-router.delete(
-	"/servers/:serverId/channels/:channelId/messages",
-	authenticated,
-	checkRole(["owner", "admin", "member"]),
-	deleteChannelMessage
-);
-
-router.put(
-	"/servers/:serverId/channels/:channelId/messages",
-	authenticated,
-	checkRole(["owner", "admin", "member"]),
-	updateChannelMessage
 );
 
 export default router;

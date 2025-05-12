@@ -10,6 +10,64 @@ interface createUpdateServerRequestBodyType {
 	name: string;
 }
 
+export const getServersForUser = async (
+	req: Request & {
+		userId: string;
+	},
+	res: Response
+) => {
+	try {
+		const userId = req.userId;
+
+		const memberships = await Membership.findAll({
+			include: [
+				{
+					as: "server",
+					include: [
+						{
+							as: "channels",
+							model: Channel,
+						},
+						{
+							as: "memberships",
+							attributes: ["roleId"],
+							include: [
+								{
+									as: "user",
+									attributes: ["id", "username"],
+									model: User,
+								},
+							],
+							model: Membership,
+						},
+					],
+					model: Server,
+				},
+			],
+			where: { userId },
+		});
+
+        const servers = memberships.map((membership) => {
+			const server = membership.server.toJSON();
+
+			server.members = server.memberships.map((m) => ({
+				id: m.user.id,
+				roleId: m.roleId,
+				username: m.user.username,
+			}));
+
+			delete server.memberships;
+
+			return server;
+		});
+
+		return res.status(200).json({ servers });
+	} catch (err) {
+		console.log(err);
+		return res.status(500).json({ message: "Internal server error" });
+	}
+};
+
 export const createServer = async (
 	req: Request<null, null, createUpdateServerRequestBodyType> & {
 		userId: string;
