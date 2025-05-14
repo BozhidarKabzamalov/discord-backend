@@ -4,6 +4,7 @@ import {
 	createChannelMessage,
 	deleteChannelMessage,
 	getChannelMessages,
+	updateChannelMessage,
 } from "../controllers/ChannelMessageController";
 import authenticated from "../middleware/authenticated";
 
@@ -16,9 +17,14 @@ router.post(
 	createChannelMessage
 );
 router.delete(
-	"/channels/:channelId/messages/messageId",
+	"/channels/:channelId/messages/:messageId",
 	authenticated,
 	deleteChannelMessage
+);
+router.put(
+	"/channels/:channelId/messages/:messageId",
+	authenticated,
+	updateChannelMessage
 );
 
 export default router;

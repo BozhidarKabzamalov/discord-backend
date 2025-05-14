@@ -9,6 +9,7 @@ import Role from "./models/Role";
 import Server from "./models/Server";
 import User from "./models/User";
 import channelMessageRoutes from "./routes/channelMessageRoutes";
+import channelRoutes from "./routes/channelRoutes";
 import serverRoutes from "./routes/serverRoutes";
 import userRoutes from "./routes/userRoutes";
 import dbConnection from "./utils/database";
@@ -21,6 +22,7 @@ app.use(cors());
 app.use(userRoutes);
 app.use(serverRoutes);
 app.use(channelMessageRoutes);
+app.use(channelRoutes);
 
 app.listen(3000);
 
@@ -28,10 +30,18 @@ Server.hasMany(Channel, { as: 'channels', foreignKey: "serverId" });
 Channel.belongsTo(Server, { as: 'server', foreignKey: "serverId" });
 
 User.belongsToMany(Server, {
-    foreignKey: "userId",
-    through: Membership,
+	as: "servers",
+	foreignKey: "userId",
+	otherKey: "serverId",
+	through: Membership,
 });
-Server.belongsToMany(User, { foreignKey: "userId", through: Membership });
+
+Server.belongsToMany(User, {
+	as: "members",
+	foreignKey: "serverId",
+	otherKey: "userId",
+	through: Membership,
+});
 
 User.hasMany(Membership, { as: "memberships", foreignKey: "userId" });
 Membership.belongsTo(User, { as: "user", foreignKey: "userId" });

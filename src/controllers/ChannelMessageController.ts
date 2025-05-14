@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import { Op } from "sequelize";
 
 import Channel from "../models/Channel";
 import ChannelMessage from "../models/ChannelMessage";
@@ -24,10 +25,10 @@ export const createChannelMessage = async (
 		const channel = await Channel.findOne({
 			include: [
 				{
-                    as: "server",
+					as: "server",
 					include: [
 						{
-                            as: "memberships",
+							as: "memberships",
 							model: Membership,
 							required: true,
 							where: { userId },
@@ -96,63 +97,86 @@ export const getChannelMessages = async (req: Request, res: Response) => {
 	}
 };
 
-export const deleteChannelMessage = async (
-	req: Request & { userId: string },
-	res: Response
-) => {
+export const deleteChannelMessage = async (req: Request, res: Response) => {
 	try {
 		const { messageId } = req.params;
 		const userId = req.userId;
 
-		const message = await ChannelMessage.findOne({
-			include: [
-				{
-					include: [
-						{
-							include: [
-								{
-									model: Membership,
-									required: true,
-									where: { userId },
-								},
-							],
-							model: Server,
-						},
-					],
-					model: Channel,
-				},
-				{
-					as: "author",
-					attributes: ["id"],
-					model: User,
-				},
-			],
-			where: { id: messageId },
-		});
+		const message = await ChannelMessage.findByPk(messageId);
 
 		if (!message) {
-			return res
-				.status(404)
-				.json({ message: "Message not found or access denied" });
+			return res.status(404).json({ error: "Message not found" });
 		}
 
-		const isAuthor = message.userId === userId;
-		const isServerAdmin =
-			message.channel?.server?.memberships?.[0]?.roleId === ADMIN_ROLE_ID;
-
-		if (!isAuthor && !isServerAdmin) {
-			return res
-				.status(403)
-				.json({ message: "Unauthorized to delete this message" });
+		if (message.userId === userId) {
+			await message.destroy();
+			return res.status(204).send();
 		}
 
-		await message.destroy();
+		const channel = await Channel.findByPk(message.channelId, {
+			include: [
+				{
+					association: "server",
+					attributes: ["id"],
+				},
+			],
+		});
 
-		return res
-			.status(200)
-			.json({ message: "Message deleted successfully" });
-	} catch (err) {
-		console.error("Error deleting message:", err);
-		return res.status(500).json({ message: "Failed to delete message" });
+		if (!channel?.server) {
+			return res.status(404).json({ error: "Channel/Server not found" });
+		}
+
+		const membership = await Membership.findOne({
+			where: {
+				[Op.or]: [{ roleId: 1 }, { roleId: 2 }],
+				serverId: channel.server.id,
+				userId,
+			},
+		});
+
+		if (membership) {
+			await message.destroy();
+			return res.status(204);
+		}
+
+		return res.status(403).json({
+			error: "Only message authors, server owners, or admins can delete messages",
+		});
+	} catch (error) {
+		console.error("Error deleting message:", error);
+		return res.status(500).json({ error: "Internal server error" });
+	}
+};
+
+export const updateChannelMessage = async (req: Request, res: Response) => {
+	try {
+		const { messageId } = req.params;
+		const { content } = req.body;
+		const userId = req.userId;
+
+		if (!messageId || !content) {
+			return res.status(400).json({
+				error: "Message ID and content are required",
+			});
+		}
+
+		const message = await ChannelMessage.findByPk(messageId);
+
+		if (!message) {
+			return res.status(404).json({ error: "Message not found" });
+		}
+
+		if (message.userId !== userId) {
+			return res.status(403).json({
+				error: "You can only edit your own messages",
+			});
+		}
+
+		const updatedMessage = await message.update({ content });
+
+		return res.status(200).json(updatedMessage);
+	} catch (error) {
+		console.error("Error updating message:", error);
+		return res.status(500).json({ error: "Internal server error" });
 	}
 };
