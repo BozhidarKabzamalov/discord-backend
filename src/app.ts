@@ -4,6 +4,7 @@ import express from "express";
 
 import Channel from "./models/Channel";
 import ChannelMessage from "./models/ChannelMessage";
+import Invite from "./models/Invite";
 import Membership from "./models/Membership";
 import Role from "./models/Role";
 import Server from "./models/Server";
@@ -57,5 +58,8 @@ ChannelMessage.belongsTo(Channel, { foreignKey: "channelId" });
 
 User.hasMany(ChannelMessage, { foreignKey: "userId" });
 ChannelMessage.belongsTo(User, { as: "user", foreignKey: "userId" });
+
+Server.hasMany(Invite, { as: "invites", foreignKey: "serverId" });
+Invite.belongsTo(Server, { as: "server", foreignKey: "serverId" });
 
 //dbConnection.sync({ force: true });

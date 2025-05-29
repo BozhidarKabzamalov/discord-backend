@@ -1,10 +1,12 @@
 import { Request, Response } from "express";
 
 import Channel from "../models/Channel";
+import Invite from "../models/Invite";
 import Membership from "../models/Membership";
 import Role from "../models/Role";
 import Server from "../models/Server";
 import User from "../models/User";
+import generateInviteCode from "../utils/generateInviteCode";
 
 interface createUpdateServerRequestBodyType {
 	name: string;
@@ -47,7 +49,7 @@ export const getServersForUser = async (
 			where: { userId },
 		});
 
-        const servers = memberships.map((membership) => {
+		const servers = memberships.map((membership) => {
 			const server = membership.server.toJSON();
 
 			server.members = server.memberships.map((m) => ({
@@ -103,9 +105,49 @@ export const createServer = async (
 			userId: ownerId,
 		});
 
+        const uniqueInviteCode = generateInviteCode(8);
+
+        await Invite.create(
+			{
+				code: uniqueInviteCode,
+				serverId: newServer.id,
+			}
+		);
+
+		const server = await Server.findByPk(newServer.id, {
+			include: [
+				{
+					as: "channels",
+					model: Channel,
+				},
+				{
+					as: "memberships",
+					attributes: ["roleId"],
+					include: [
+						{
+							as: "user",
+							attributes: ["id", "username"],
+							model: User,
+						},
+					],
+					model: Membership,
+				},
+			],
+		});
+
+		const mappedServer = server!.toJSON();
+
+		mappedServer.members = mappedServer.memberships.map((m) => ({
+			id: m.user.id,
+			roleId: m.roleId,
+			username: m.user.username,
+		}));
+
+		delete mappedServer.memberships;
+
 		return res.status(201).json({
 			message: "Server created successfully",
-			server: newServer,
+			server: mappedServer,
 		});
 	} catch (error) {
 		console.log(error);
@@ -114,18 +156,18 @@ export const createServer = async (
 };
 
 export const joinServer = async (
-	req: Request<{ serverId: number }> & {
+	req: Request<{ inviteCode: number }> & {
 		userId: string;
 	},
 	res: Response
 ) => {
 	try {
-		const { serverId } = req.params;
+		const { inviteCode } = req.params;
 		const userId = req.userId;
 
-		if (!serverId) {
+		if (!inviteCode) {
 			return res.status(400).json({
-				message: "Server Id is required",
+				message: "Invite code is required",
 			});
 		}
 
@@ -139,10 +181,12 @@ export const joinServer = async (
 			return res.status(400).json({ message: "User not found" });
 		}
 
-		const server = await Server.findByPk(serverId);
+        const invite = await Invite.findOne({
+			where: { code: inviteCode }
+		});
 
-		if (!server) {
-			return res.status(400).json({ message: "Server not found" });
+		if (!invite) {
+			return res.status(404).json({ message: "Invite code not found" });
 		}
 
 		const memberRole = await Role.findOne({
@@ -156,7 +200,7 @@ export const joinServer = async (
 		}
 
 		const existingMembership = await Membership.findOne({
-			where: { serverId: server.id, userId },
+			where: { serverId: invite.serverId, userId },
 		});
 
 		if (existingMembership) {
@@ -167,8 +211,44 @@ export const joinServer = async (
 
 		await Membership.create({
 			roleId: memberRole.id,
-			serverId: server.id,
+			serverId: invite.serverId,
 			userId,
+		});
+
+        const server = await Server.findByPk(invite.serverId, {
+			include: [
+				{
+					as: "channels",
+					model: Channel,
+				},
+				{
+					as: "memberships",
+					attributes: ["roleId"],
+					include: [
+						{
+							as: "user",
+							attributes: ["id", "username"],
+							model: User,
+						},
+					],
+					model: Membership,
+				},
+			],
+		});
+
+		const mappedServer = server!.toJSON();
+
+		mappedServer.members = mappedServer.memberships.map((m) => ({
+			id: m.user.id,
+			roleId: m.roleId,
+			username: m.user.username,
+		}));
+
+		delete mappedServer.memberships;
+
+		return res.status(201).json({
+			message: "Server created successfully",
+			server: mappedServer,
 		});
 	} catch (error) {
 		console.log(error);

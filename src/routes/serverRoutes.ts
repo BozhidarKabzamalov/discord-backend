@@ -15,7 +15,7 @@ const router = Router();
 
 router.get("/servers", authenticated, getServersForUser);
 router.post("/servers", authenticated, createServer);
-router.post("/servers/:serverId/join", authenticated, joinServer);
+router.post("/servers/join/:inviteCode", authenticated, joinServer);
 router.post(
 	"/servers/:serverId/leave",
 	authenticated,
