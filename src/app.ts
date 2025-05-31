@@ -2,6 +2,7 @@ import bodyParser from "body-parser";
 import cors from "cors";
 import express from "express";
 
+import Category from "./models/Category";
 import Channel from "./models/Channel";
 import ChannelMessage from "./models/ChannelMessage";
 import Invite from "./models/Invite";
@@ -9,6 +10,7 @@ import Membership from "./models/Membership";
 import Role from "./models/Role";
 import Server from "./models/Server";
 import User from "./models/User";
+import categoryRoutes from "./routes/categoryRoutes";
 import channelMessageRoutes from "./routes/channelMessageRoutes";
 import channelRoutes from "./routes/channelRoutes";
 import serverRoutes from "./routes/serverRoutes";
@@ -24,11 +26,29 @@ app.use(userRoutes);
 app.use(serverRoutes);
 app.use(channelMessageRoutes);
 app.use(channelRoutes);
+app.use(categoryRoutes);
 
 app.listen(3000);
 
-Server.hasMany(Channel, { as: 'channels', foreignKey: "serverId" });
-Channel.belongsTo(Server, { as: 'server', foreignKey: "serverId" });
+Server.hasMany(Category, {
+	as: "categories",
+	foreignKey: "serverId",
+	onDelete: "CASCADE",
+});
+Category.belongsTo(Server, {
+	as: "server",
+	foreignKey: "serverId",
+});
+
+Category.hasMany(Channel, {
+	as: "channels",
+	foreignKey: "categoryId",
+	onDelete: "CASCADE",
+});
+Channel.belongsTo(Category, {
+	as: "category",
+	foreignKey: "categoryId",
+});
 
 User.belongsToMany(Server, {
 	as: "servers",
@@ -53,7 +73,7 @@ Membership.belongsTo(Server, { as: "server", foreignKey: "serverId" });
 Role.hasMany(Membership, { foreignKey: "roleId" });
 Membership.belongsTo(Role, { foreignKey: "roleId" });
 
-Channel.hasMany(ChannelMessage, { foreignKey: 'channelId' })
+Channel.hasMany(ChannelMessage, { foreignKey: "channelId" });
 ChannelMessage.belongsTo(Channel, { foreignKey: "channelId" });
 
 User.hasMany(ChannelMessage, { foreignKey: "userId" });

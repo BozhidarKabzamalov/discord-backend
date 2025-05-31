@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 
+import Category from "../models/Category";
 import Channel from "../models/Channel";
 import Invite from "../models/Invite";
 import Membership from "../models/Membership";
@@ -27,8 +28,14 @@ export const getServersForUser = async (
 					as: "server",
 					include: [
 						{
-							as: "channels",
-							model: Channel,
+							as: "categories",
+							include: [
+								{
+									as: "channels",
+									model: Channel,
+								},
+							],
+							model: Category,
 						},
 						{
 							as: "memberships",
@@ -84,12 +91,34 @@ export const createServer = async (
 			return res.status(400).json({ message: "Server name is required" });
 		}
 
-		const newServer = await Server.create({ name, ownerId });
-
-		await Channel.bulkCreate([
-			{ name: "general", serverId: newServer.id, type: "text" },
-			{ name: "general", serverId: newServer.id, type: "voice" },
-		]);
+		const newServer = await Server.create(
+			{
+				categories: [
+					{
+						channels: [{ name: "general", type: "text" }],
+						name: "Text Channels",
+					},
+					{
+						channels: [{ name: "general", type: "voice" }],
+						name: "Voice Channels",
+					},
+				],
+				name,
+				ownerId,
+			},
+			{
+				include: [
+					{
+						association: Server.associations.categories,
+						include: [
+							{
+								association: Category.associations.channels,
+							},
+						],
+					},
+				],
+			}
+		);
 
 		const ownerRole = await Role.findOne({ where: { name: "owner" } });
 
@@ -105,20 +134,24 @@ export const createServer = async (
 			userId: ownerId,
 		});
 
-        const uniqueInviteCode = generateInviteCode(8);
+		const uniqueInviteCode = generateInviteCode(8);
 
-        await Invite.create(
-			{
-				code: uniqueInviteCode,
-				serverId: newServer.id,
-			}
-		);
+		await Invite.create({
+			code: uniqueInviteCode,
+			serverId: newServer.id,
+		});
 
 		const server = await Server.findByPk(newServer.id, {
 			include: [
 				{
-					as: "channels",
-					model: Channel,
+					as: "categories",
+					include: [
+						{
+							as: "channels",
+							model: Channel,
+						},
+					],
+					model: Category,
 				},
 				{
 					as: "memberships",
@@ -181,8 +214,8 @@ export const joinServer = async (
 			return res.status(400).json({ message: "User not found" });
 		}
 
-        const invite = await Invite.findOne({
-			where: { code: inviteCode }
+		const invite = await Invite.findOne({
+			where: { code: inviteCode },
 		});
 
 		if (!invite) {
@@ -215,11 +248,17 @@ export const joinServer = async (
 			userId,
 		});
 
-        const server = await Server.findByPk(invite.serverId, {
+		const server = await Server.findByPk(invite.serverId, {
 			include: [
 				{
-					as: "channels",
-					model: Channel,
+					as: "categories",
+					include: [
+						{
+							as: "channels",
+							model: Channel,
+						},
+					],
+					model: Category,
 				},
 				{
 					as: "memberships",

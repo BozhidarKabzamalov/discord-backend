@@ -3,14 +3,20 @@ import { DataTypes, Model } from "sequelize";
 import dbConnection from "../utils/database";
 
 class Channel extends Model {
+	declare categoryId: number;
 	declare id: number;
-	declare name: string;
-    declare serverId: number;
+    declare name: string;
     declare type: "text" | "voice";
 }
 
 Channel.init(
 	{
+		categoryId: {
+			allowNull: false,
+			onDelete: "CASCADE",
+			references: { key: "id", model: "Categories" },
+			type: DataTypes.INTEGER,
+		},
 		id: {
 			allowNull: false,
 			autoIncrement: true,
@@ -20,12 +26,6 @@ Channel.init(
 		name: {
 			allowNull: false,
 			type: DataTypes.STRING,
-		},
-		serverId: {
-			allowNull: false,
-			onDelete: "CASCADE",
-			references: { key: "id", model: "Servers" },
-			type: DataTypes.INTEGER,
 		},
 		type: {
 			allowNull: false,

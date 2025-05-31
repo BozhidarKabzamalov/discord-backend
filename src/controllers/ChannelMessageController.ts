@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { Op } from "sequelize";
 
+import Category from "../models/Category";
 import Channel from "../models/Channel";
 import ChannelMessage from "../models/ChannelMessage";
 import Membership from "../models/Membership";
@@ -22,19 +23,27 @@ export const createChannelMessage = async (
 				.json({ message: "Message content is required" });
 		}
 
-		const channel = await Channel.findOne({
+        const channel = await Channel.findOne({
 			include: [
 				{
-					as: "server",
+					as: "category",
 					include: [
 						{
-							as: "memberships",
-							model: Membership,
+							as: "server",
+							include: [
+								{
+									as: "memberships",
+									model: Membership,
+									required: true,
+									where: { userId },
+								},
+							],
+							model: Server,
 							required: true,
-							where: { userId },
 						},
 					],
-					model: Server,
+					model: Category,
+					required: true,
 				},
 			],
 			where: { id: channelId },
