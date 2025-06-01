@@ -11,19 +11,19 @@ import checkRole from "../middleware/checkRole";
 const router = Router();
 
 router.post(
-	"/servers/:serverId/channels",
+	"/servers/:serverId/categories/:categoryId/channels",
 	authenticated,
 	checkRole(["owner", "admin"]),
 	createChannel
 );
 router.delete(
-	"/servers/:serverId/channels/:channelId",
+	"/servers/:serverId/categories/:categoryId/channels/:channelId",
 	authenticated,
 	checkRole(["owner", "admin"]),
 	deleteChannel
 );
 router.put(
-	"/servers/:serverId/channels/:channelId",
+	"/servers/:serverId/categories/:categoryId/channels/:channelId",
 	authenticated,
 	checkRole(["owner", "admin"]),
 	updateChannel

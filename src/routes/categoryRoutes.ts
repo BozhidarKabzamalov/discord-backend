@@ -24,7 +24,6 @@ router.put(
 	updateCategory
 );
 
-// DELETE /api/servers/:serverId/categories/:categoryId
 router.delete(
 	"/servers/:serverId/categories/:categoryId",
 	authenticated,
