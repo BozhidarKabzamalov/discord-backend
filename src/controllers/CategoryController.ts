@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 
 import Category from "../models/Category";
+import Channel from "../models/Channel";
 import Server from "../models/Server";
 
 interface CreateCategoryRequestBody {
@@ -39,8 +40,20 @@ export const createCategory = async (
 			serverId: serverId,
 		});
 
+		const newCategoryWithChannels = await Category.findByPk(
+			newCategory.id,
+			{
+				include: [
+					{
+						as: "channels",
+						model: Channel,
+					},
+				],
+			}
+		);
+
 		return res.status(201).json({
-			category: newCategory,
+			category: newCategoryWithChannels,
 			message: "Category created successfully",
 		});
 	} catch (error) {

@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { Op } from "sequelize";
+import { Server as SocketIOServer } from "socket.io";
 
 import Category from "../models/Category";
 import Channel from "../models/Channel";
@@ -9,13 +10,14 @@ import Server from "../models/Server";
 import User from "../models/User";
 
 export const createChannelMessage = async (
-	req: Request & { userId: string },
+	req: Request & { io: SocketIOServer; userId: string; },
 	res: Response
 ) => {
 	try {
 		const { channelId } = req.params;
 		const { content } = req.body;
 		const userId = req.userId;
+		const io = req.io;
 
 		if (!content || typeof content !== "string") {
 			return res
@@ -23,7 +25,7 @@ export const createChannelMessage = async (
 				.json({ message: "Message content is required" });
 		}
 
-        const channel = await Channel.findOne({
+		const channel = await Channel.findOne({
 			include: [
 				{
 					as: "category",
@@ -70,6 +72,10 @@ export const createChannelMessage = async (
 				},
 			],
 		});
+
+		const room = `channel:${channelId}`;
+		// Emit the new message to all clients in that room
+		io.to(room).emit("new_message", messageWithAuthor);
 
 		return res.status(201).json({ message: messageWithAuthor });
 	} catch (err) {

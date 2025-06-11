@@ -1,6 +1,8 @@
 import bodyParser from "body-parser";
 import cors from "cors";
 import express from "express";
+import http from "http";
+import { Server as SocketIOServer } from "socket.io";
 
 import Category from "./models/Category";
 import Channel from "./models/Channel";
@@ -19,6 +21,19 @@ import dbConnection from "./utils/database";
 
 const app = express();
 
+const server = http.createServer(app);
+const io = new SocketIOServer(server, {
+	cors: {
+		methods: ["GET", "POST"],
+		origin: "http://localhost:5173",
+	},
+});
+
+app.use((req, res, next) => {
+	req.io = io;
+	next();
+});
+
 app.use(bodyParser.json());
 app.use(cors());
 
@@ -28,7 +43,29 @@ app.use(channelMessageRoutes);
 app.use(channelRoutes);
 app.use(categoryRoutes);
 
-app.listen(3000);
+server.listen(3000, () => {
+	console.log(`Server is running on port 3000`);
+});
+
+io.on("connection", (socket) => {
+	console.log(`User connected: ${socket.id}`);
+
+	// Join a room corresponding to a channel
+	socket.on("join_channel", async (channelId) => {
+		await socket.join(`channel:${channelId}`);
+		console.log(`User ${socket.id} joined channel room: ${channelId}`);
+	});
+
+	// Leave a room
+	socket.on("leave_channel", async (channelId) => {
+		await socket.leave(`channel:${channelId}`);
+		console.log(`User ${socket.id} left channel room: ${channelId}`);
+	});
+
+	socket.on("disconnect", () => {
+		console.log(`User disconnected: ${socket.id}`);
+	});
+});
 
 Server.hasMany(Category, {
 	as: "categories",

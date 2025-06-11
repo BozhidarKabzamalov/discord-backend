@@ -18,7 +18,7 @@ export const createChannel = async (
 ) => {
 	try {
 		const { name, type } = req.body;
-		const { serverId } = req.params;
+		const { categoryId, serverId } = req.params;
 
 		if (!name) {
 			return res.status(400).json({ error: "Missing required fields" });
@@ -35,14 +35,19 @@ export const createChannel = async (
 		}
 
 		const channel = await Channel.create({
+			categoryId,
 			name,
-			serverId,
 			type,
 		});
 
 		const createdChannel = await Channel.findByPk(channel.id);
 
-		return res.status(201).json(createdChannel);
+		return res
+			.status(201)
+			.json({
+				channel: createdChannel,
+				message: "Channel created successfully",
+			});
 	} catch (error) {
 		console.error("Error creating channel:", error);
 		return res.status(500).json({ error: "Internal server error" });

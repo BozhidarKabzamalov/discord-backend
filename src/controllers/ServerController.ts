@@ -53,6 +53,9 @@ export const getServersForUser = async (
 					model: Server,
 				},
 			],
+			order: [
+				["server", "categories", "createdAt", "ASC"],
+			],
 			where: { userId },
 		});
 
@@ -305,6 +308,12 @@ export const leaveServer = async (
 		const { serverId } = req.params;
 		const userId = req.userId;
 
+        const server = await Server.findByPk(serverId);
+
+		if (!server) {
+			return res.status(404).json({ message: "Server not found" });
+		}
+
 		const membership = await Membership.findOne({
 			where: { serverId, userId },
 		});
@@ -314,6 +323,12 @@ export const leaveServer = async (
 				message: "User is not a member of this server",
 			});
 		}
+
+        if (membership.roleId === 1) {
+			await Membership.destroy({ where: { serverId } });
+
+			await server.destroy();
+        }
 
 		await membership.destroy();
 
