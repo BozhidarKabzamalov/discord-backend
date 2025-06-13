@@ -15,6 +15,7 @@ import User from "./models/User";
 import categoryRoutes from "./routes/categoryRoutes";
 import channelMessageRoutes from "./routes/channelMessageRoutes";
 import channelRoutes from "./routes/channelRoutes";
+import membershipRoutes from "./routes/membershipRoutes";
 import serverRoutes from "./routes/serverRoutes";
 import userRoutes from "./routes/userRoutes";
 import dbConnection from "./utils/database";
@@ -42,6 +43,7 @@ app.use(serverRoutes);
 app.use(channelMessageRoutes);
 app.use(channelRoutes);
 app.use(categoryRoutes);
+app.use(membershipRoutes);
 
 server.listen(3000, () => {
 	console.log(`Server is running on port 3000`);
@@ -50,13 +52,11 @@ server.listen(3000, () => {
 io.on("connection", (socket) => {
 	console.log(`User connected: ${socket.id}`);
 
-	// Join a room corresponding to a channel
 	socket.on("join_channel", async (channelId) => {
 		await socket.join(`channel:${channelId}`);
 		console.log(`User ${socket.id} joined channel room: ${channelId}`);
 	});
 
-	// Leave a room
 	socket.on("leave_channel", async (channelId) => {
 		await socket.leave(`channel:${channelId}`);
 		console.log(`User ${socket.id} left channel room: ${channelId}`);

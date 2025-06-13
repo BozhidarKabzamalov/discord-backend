@@ -70,7 +70,7 @@ export const deleteChannel = async (req: Request, res: Response) => {
 
 		await channel.destroy();
 
-		return res.status(204);
+		return res.status(200).json({ message: "Channel has been deleted" });
 	} catch (error) {
 		console.error("Error deleting channel:", error);
 		return res.status(500).json({ error: "Internal server error" });

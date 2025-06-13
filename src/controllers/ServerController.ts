@@ -289,7 +289,7 @@ export const joinServer = async (
 		delete mappedServer.memberships;
 
 		return res.status(201).json({
-			message: "Server created successfully",
+			message: "Server joined successfully",
 			server: mappedServer,
 		});
 	} catch (error) {

@@ -19,7 +19,7 @@ router.post("/servers/join/:inviteCode", authenticated, joinServer);
 router.post(
 	"/servers/:serverId/leave",
 	authenticated,
-	checkRole(["admin", "member"]),
+	checkRole(["owner", "admin", "member"]),
 	leaveServer
 );
 router.delete(

@@ -17,13 +17,13 @@ router.post(
 	createChannel
 );
 router.delete(
-	"/servers/:serverId/categories/:categoryId/channels/:channelId",
+	"/servers/:serverId/channels/:channelId",
 	authenticated,
 	checkRole(["owner", "admin"]),
 	deleteChannel
 );
 router.put(
-	"/servers/:serverId/categories/:categoryId/channels/:channelId",
+	"/servers/:serverId/channels/:channelId",
 	authenticated,
 	checkRole(["owner", "admin"]),
 	updateChannel
