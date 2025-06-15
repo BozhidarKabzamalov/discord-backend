@@ -112,10 +112,14 @@ export const getChannelMessages = async (req: Request, res: Response) => {
 	}
 };
 
-export const deleteChannelMessage = async (req: Request, res: Response) => {
+export const deleteChannelMessage = async (
+	req: Request & { io: SocketIOServer; userId: string },
+	res: Response
+) => {
 	try {
 		const { messageId } = req.params;
-		const userId = req.userId;
+		const userId = req.userId; // Assuming userId is a number to match the DB
+		const io = req.io;
 
 		const message = await ChannelMessage.findByPk(messageId);
 
@@ -123,7 +127,10 @@ export const deleteChannelMessage = async (req: Request, res: Response) => {
 			return res.status(404).json({ error: "Message not found" });
 		}
 
-		if (message.userId === userId) {
+		if (message.userId === Number(userId)) {
+			const room = `channel:${message.channelId}`;
+			io.to(room).emit("deleted_message", messageId);
+
 			await message.destroy();
 			return res.status(204).send();
 		}
@@ -131,27 +138,43 @@ export const deleteChannelMessage = async (req: Request, res: Response) => {
 		const channel = await Channel.findByPk(message.channelId, {
 			include: [
 				{
-					association: "server",
+					model: Category,
+					as: "category",
 					attributes: ["id"],
+					include: [
+						{
+							model: Server,
+							as: "server",
+							attributes: ["id"],
+						},
+					],
 				},
 			],
 		});
 
-		if (!channel?.server) {
-			return res.status(404).json({ error: "Channel/Server not found" });
+		if (!channel?.category?.server) {
+			return res
+				.status(404)
+				.json({ error: "Channel or Server not found" });
 		}
 
 		const membership = await Membership.findOne({
 			where: {
 				[Op.or]: [{ roleId: 1 }, { roleId: 2 }],
-				serverId: channel.server.id,
-				userId,
+				serverId: channel.category.server.id,
+				userId: Number(userId),
 			},
 		});
 
 		if (membership) {
+			const room = `channel:${channel.id}`;
+			io.to(room).emit("deleted_message", messageId);
+
 			await message.destroy();
-			return res.status(204);
+
+			return res
+				.status(200)
+				.json({ message: "Message successfully deleted" });
 		}
 
 		return res.status(403).json({
