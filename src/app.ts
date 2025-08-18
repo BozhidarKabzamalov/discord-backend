@@ -49,9 +49,12 @@ server.listen(3000, () => {
 	console.log(`Server is running on port 3000`);
 });
 
-io.on("connection", (socket) => {
-	console.log(`User connected: ${socket.id}`);
+const voiceChannelParticipants = new Map();
 
+io.on("connection", (socket) => {
+	console.log(`[SOCKET] User connected: ${socket.id}`);
+
+	// Text channel events
 	socket.on("join_channel", async (channelId) => {
 		await socket.join(`channel:${channelId}`);
 		console.log(`User ${socket.id} joined channel room: ${channelId}`);
@@ -62,8 +65,171 @@ io.on("connection", (socket) => {
 		console.log(`User ${socket.id} left channel room: ${channelId}`);
 	});
 
+	// Voice channel events
+	socket.on(
+		"join_voice_channel",
+		async ({ channelId, hasVideo = false, userId, username }) => {
+			console.log(
+				`[VOICE] User ${username} (${socket.id}) attempting to join voice channel: ${channelId} with video: ${hasVideo}`
+			);
+
+			await socket.join(`voice:${channelId}`);
+
+			// Add user to participants map
+			if (!voiceChannelParticipants.has(channelId)) {
+				voiceChannelParticipants.set(channelId, new Map());
+			}
+			voiceChannelParticipants.get(channelId).set(socket.id, {
+				hasVideo,
+				socketId: socket.id,
+				userId,
+				username,
+			});
+
+			// Get current participants (including the new user)
+			const participants = Array.from(
+				voiceChannelParticipants.get(channelId).values()
+			);
+			console.log(
+				`[VOICE] Current participants in channel ${channelId}:`,
+				participants
+			);
+
+			// Notify all users in the voice channel about the new participant
+			socket.to(`voice:${channelId}`).emit("user_joined_voice", {
+				hasVideo,
+				socketId: socket.id,
+				userId,
+				username,
+			});
+
+			// Send current participants to the new user
+			socket.emit("voice_channel_participants", participants);
+
+			// Also broadcast updated participant list to all users in the channel
+			io.to(`voice:${channelId}`).emit(
+				"voice_channel_participants",
+				participants
+			);
+
+			console.log(
+				`[VOICE] User ${username} (${socket.id}) successfully joined voice channel: ${channelId}`
+			);
+		}
+	);
+
+	socket.on(
+		"leave_voice_channel",
+		async ({ channelId, userId, username }) => {
+			await socket.leave(`voice:${channelId}`);
+
+			// Remove user from participants map
+			if (voiceChannelParticipants.has(channelId)) {
+				voiceChannelParticipants.get(channelId).delete(socket.id);
+				if (voiceChannelParticipants.get(channelId).size === 0) {
+					voiceChannelParticipants.delete(channelId);
+				}
+			}
+
+			// Notify all users in the voice channel about the user leaving
+			socket.to(`voice:${channelId}`).emit("user_left_voice", {
+				socketId: socket.id,
+				userId,
+				username,
+			});
+
+			console.log(
+				`User ${username} (${socket.id}) left voice channel: ${channelId}`
+			);
+		}
+	);
+
+	// WebRTC signaling events
+	socket.on("webrtc_offer", ({ channelId, offer, targetSocketId }) => {
+		socket.to(targetSocketId).emit("webrtc_offer", {
+			channelId,
+			offer,
+			senderSocketId: socket.id,
+		});
+	});
+
+	socket.on("webrtc_answer", ({ answer, channelId, targetSocketId }) => {
+		socket.to(targetSocketId).emit("webrtc_answer", {
+			answer,
+			channelId,
+			senderSocketId: socket.id,
+		});
+	});
+
+	socket.on(
+		"webrtc_ice_candidate",
+		({ candidate, channelId, targetSocketId }) => {
+			socket.to(targetSocketId).emit("webrtc_ice_candidate", {
+				candidate,
+				channelId,
+				senderSocketId: socket.id,
+			});
+		}
+	);
+
+	// Video state change event
+	socket.on("video_state_changed", ({ channelId, hasVideo }) => {
+		console.log(
+			`[VOICE] User ${socket.id} changed video state to: ${hasVideo} in channel: ${channelId}`
+		);
+
+		// Update participant video state
+		if (voiceChannelParticipants.has(channelId)) {
+			const participant = voiceChannelParticipants
+				.get(channelId)
+				.get(socket.id);
+			if (participant) {
+				participant.hasVideo = hasVideo;
+
+				// Broadcast updated participant list to all users in the channel
+				const participants = Array.from(
+					voiceChannelParticipants.get(channelId).values()
+				);
+				io.to(`voice:${channelId}`).emit(
+					"voice_channel_participants",
+					participants
+				);
+
+				// Also notify about the specific video state change
+				socket
+					.to(`voice:${channelId}`)
+					.emit("user_video_state_changed", {
+						hasVideo,
+						socketId: socket.id,
+					});
+			}
+		}
+	});
+
 	socket.on("disconnect", () => {
-		console.log(`User disconnected: ${socket.id}`);
+		console.log(`[SOCKET] User disconnected: ${socket.id}`);
+
+		// Clean up voice channel participants
+		for (const [
+			channelId,
+			participants,
+		] of voiceChannelParticipants.entries()) {
+			if (participants.has(socket.id)) {
+				const user = participants.get(socket.id);
+				participants.delete(socket.id);
+
+				// Notify other users in the voice channel
+				socket.to(`voice:${channelId}`).emit("user_left_voice", {
+					socketId: socket.id,
+					userId: user.userId,
+					username: user.username,
+				});
+
+				if (participants.size === 0) {
+					voiceChannelParticipants.delete(channelId);
+				}
+			}
+		}
 	});
 });
 
