@@ -121,25 +121,48 @@ io.on("connection", (socket) => {
 	socket.on(
 		"leave_voice_channel",
 		async ({ channelId, userId, username }) => {
+			console.log(
+				`[VOICE] User ${username} (${socket.id}) leaving voice channel: ${channelId}`
+			);
+
 			await socket.leave(`voice:${channelId}`);
 
 			// Remove user from participants map
 			if (voiceChannelParticipants.has(channelId)) {
 				voiceChannelParticipants.get(channelId).delete(socket.id);
+				
+				// Get updated participants list
+				const participants = Array.from(
+					voiceChannelParticipants.get(channelId).values()
+				);
+				
+				console.log(
+					`[VOICE] Updated participants after ${username} left:`,
+					participants
+				);
+
+				// Broadcast updated participant list to all remaining users
+				io.to(`voice:${channelId}`).emit(
+					"voice_channel_participants",
+					participants
+				);
+
+				// Also notify about the specific user leaving
+				socket.to(`voice:${channelId}`).emit("user_left_voice", {
+					socketId: socket.id,
+					userId,
+					username,
+				});
+
+				// Clean up empty channel
 				if (voiceChannelParticipants.get(channelId).size === 0) {
 					voiceChannelParticipants.delete(channelId);
+					console.log(`[VOICE] Deleted empty voice channel: ${channelId}`);
 				}
 			}
 
-			// Notify all users in the voice channel about the user leaving
-			socket.to(`voice:${channelId}`).emit("user_left_voice", {
-				socketId: socket.id,
-				userId,
-				username,
-			});
-
 			console.log(
-				`User ${username} (${socket.id}) left voice channel: ${channelId}`
+				`[VOICE] User ${username} (${socket.id}) successfully left voice channel: ${channelId}`
 			);
 		}
 	);
@@ -218,15 +241,30 @@ io.on("connection", (socket) => {
 				const user = participants.get(socket.id);
 				participants.delete(socket.id);
 
-				// Notify other users in the voice channel
+				console.log(
+					`[VOICE] User ${user.username} (${socket.id}) disconnected from voice channel: ${channelId}`
+				);
+
+				// Get updated participants list
+				const updatedParticipants = Array.from(participants.values());
+
+				// Broadcast updated participant list to all remaining users
+				io.to(`voice:${channelId}`).emit(
+					"voice_channel_participants",
+					updatedParticipants
+				);
+
+				// Also notify about the specific user leaving
 				socket.to(`voice:${channelId}`).emit("user_left_voice", {
 					socketId: socket.id,
 					userId: user.userId,
 					username: user.username,
 				});
 
+				// Clean up empty channel
 				if (participants.size === 0) {
 					voiceChannelParticipants.delete(channelId);
+					console.log(`[VOICE] Deleted empty voice channel after disconnect: ${channelId}`);
 				}
 			}
 		}
