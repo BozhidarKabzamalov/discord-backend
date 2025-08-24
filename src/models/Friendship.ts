@@ -2,21 +2,15 @@ import { DataTypes, Model } from "sequelize";
 
 import dbConnection from "../utils/database";
 
-class DirectMessage extends Model {
-	declare content: string;
+class Friendship extends Model {
 	declare createdAt: Date;
 	declare id: number;
-	declare receiverId: number;
-	declare senderId: number;
-	declare updatedAt: Date;
+	declare userId1: number;
+	declare userId2: number;
 }
 
-DirectMessage.init(
+Friendship.init(
 	{
-		content: {
-			allowNull: false,
-			type: DataTypes.TEXT,
-		},
 		createdAt: {
 			allowNull: false,
 			type: DataTypes.DATE,
@@ -27,25 +21,27 @@ DirectMessage.init(
 			primaryKey: true,
 			type: DataTypes.INTEGER,
 		},
-		receiverId: {
+		userId1: {
 			allowNull: false,
 			references: { key: "id", model: "Users" },
 			type: DataTypes.INTEGER,
 		},
-		senderId: {
+		userId2: {
 			allowNull: false,
 			references: { key: "id", model: "Users" },
 			type: DataTypes.INTEGER,
-		},
-		updatedAt: {
-			allowNull: false,
-			type: DataTypes.DATE,
 		},
 	},
 	{
-		modelName: "DirectMessage",
+		indexes: [
+			{
+				fields: ['userId1', 'userId2'],
+				unique: true,
+			},
+		],
+		modelName: "Friendship",
 		sequelize: dbConnection,
 	}
 );
 
-export default DirectMessage;
+export default Friendship;
