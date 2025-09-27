@@ -56,6 +56,21 @@ export const sendDirectMessage = async (
 			]
 		});
 
+		// Emit socket event to both sender and receiver
+		if (req.io) {
+			console.log(`[DM] Emitting new_direct_message to sender ${senderId} and receiver ${receiverId}`);
+			
+			// Emit to sender's room
+			req.io.to(`dm:${senderId}`).emit("new_direct_message", {
+				directMessage: messageWithSender
+			});
+			
+			// Emit to receiver's room
+			req.io.to(`dm:${receiverId}`).emit("new_direct_message", {
+				directMessage: messageWithSender
+			});
+		}
+
 		return res.status(201).json({
 			directMessage: messageWithSender,
 			message: "Direct message sent successfully"

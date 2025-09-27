@@ -240,6 +240,17 @@ io.on("connection", (socket) => {
 		}
 	});
 
+	// Direct message events
+	socket.on("join_dm", async (userId) => {
+		await socket.join(`dm:${userId}`);
+		console.log(`[DM] User ${socket.id} joined DM room: ${userId}`);
+	});
+
+	socket.on("leave_dm", async (userId) => {
+		await socket.leave(`dm:${userId}`);
+		console.log(`[DM] User ${socket.id} left DM room: ${userId}`);
+	});
+
 	socket.on("disconnect", () => {
 		console.log(`[SOCKET] User disconnected: ${socket.id}`);
 
