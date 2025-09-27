@@ -17,6 +17,10 @@ Channel.init(
 			references: { key: "id", model: "Categories" },
 			type: DataTypes.INTEGER,
 		},
+		createdAt: {
+			allowNull: false,
+			type: DataTypes.DATE,
+		},
 		id: {
 			allowNull: false,
 			autoIncrement: true,
@@ -30,6 +34,10 @@ Channel.init(
 		type: {
 			allowNull: false,
 			type: DataTypes.ENUM("text", "voice"),
+		},
+		updatedAt: {
+			allowNull: false,
+			type: DataTypes.DATE,
 		},
 	},
 	{

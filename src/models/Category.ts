@@ -10,6 +10,10 @@ class Category extends Model {
 
 Category.init(
 	{
+		createdAt: {
+			allowNull: false,
+			type: DataTypes.DATE,
+		},
 		id: {
 			allowNull: false,
 			autoIncrement: true,
@@ -25,6 +29,10 @@ Category.init(
 			onDelete: "CASCADE",
 			references: { key: "id", model: "Servers" },
 			type: DataTypes.INTEGER,
+		},
+		updatedAt: {
+			allowNull: false,
+			type: DataTypes.DATE,
 		},
 	},
 	{

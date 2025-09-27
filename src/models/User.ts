@@ -11,6 +11,10 @@ class User extends Model {
 
 User.init(
 	{
+		createdAt: {
+			allowNull: false,
+			type: DataTypes.DATE,
+		},
 		email: {
 			allowNull: false,
 			type: DataTypes.STRING,
@@ -24,6 +28,10 @@ User.init(
 		password: {
 			allowNull: false,
 			type: DataTypes.STRING,
+		},
+		updatedAt: {
+			allowNull: false,
+			type: DataTypes.DATE,
 		},
 		username: {
 			allowNull: false,

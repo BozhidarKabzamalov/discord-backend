@@ -21,6 +21,10 @@ Friendship.init(
 			primaryKey: true,
 			type: DataTypes.INTEGER,
 		},
+		updatedAt: {
+			allowNull: false,
+			type: DataTypes.DATE,
+		},
 		userId1: {
 			allowNull: false,
 			references: { key: "id", model: "Users" },
@@ -35,7 +39,7 @@ Friendship.init(
 	{
 		indexes: [
 			{
-				fields: ['userId1', 'userId2'],
+				fields: ["userId1", "userId2"],
 				unique: true,
 			},
 		],

@@ -30,7 +30,9 @@ export const sendFriendRequest = async (
 		}
 
 		if (receiver.id === senderId) {
-			return res.status(400).json({ error: "Cannot send friend request to yourself" });
+			return res
+				.status(400)
+				.json({ error: "Cannot send friend request to yourself" });
 		}
 
 		// Check if friend request already exists
@@ -38,13 +40,15 @@ export const sendFriendRequest = async (
 			where: {
 				[Op.or]: [
 					{ receiverId: receiver.id, senderId },
-					{ receiverId: senderId, senderId: receiver.id }
-				]
-			}
+					{ receiverId: senderId, senderId: receiver.id },
+				],
+			},
 		});
 
 		if (existingRequest) {
-			return res.status(400).json({ error: "Friend request already exists" });
+			return res
+				.status(400)
+				.json({ error: "Friend request already exists" });
 		}
 
 		// Check if they are already friends
@@ -52,9 +56,9 @@ export const sendFriendRequest = async (
 			where: {
 				[Op.or]: [
 					{ userId1: senderId, userId2: receiver.id },
-					{ userId1: receiver.id, userId2: senderId }
-				]
-			}
+					{ userId1: receiver.id, userId2: senderId },
+				],
+			},
 		});
 
 		if (existingFriendship) {
@@ -65,12 +69,12 @@ export const sendFriendRequest = async (
 		const friendRequest = await FriendRequest.create({
 			receiverId: receiver.id,
 			senderId,
-			status: 'pending'
+			status: "pending",
 		});
 
 		return res.status(201).json({
 			friendRequest,
-			message: "Friend request sent successfully"
+			message: "Friend request sent successfully",
 		});
 	} catch (error) {
 		console.log(error);
@@ -89,7 +93,7 @@ export const acceptFriendRequest = async (
 		const receiverId = parseInt(req.userId);
 
 		const friendRequest = await FriendRequest.findOne({
-			where: { id: parseInt(requestId), receiverId, status: 'pending' }
+			where: { id: parseInt(requestId), receiverId, status: "pending" },
 		});
 
 		if (!friendRequest) {
@@ -97,20 +101,20 @@ export const acceptFriendRequest = async (
 		}
 
 		// Update request status to accepted
-		await friendRequest.update({ status: 'accepted' });
+		await friendRequest.update({ status: "accepted" });
 
 		// Create friendship
 		await Friendship.create({
 			userId1: friendRequest.senderId,
-			userId2: friendRequest.receiverId
+			userId2: friendRequest.receiverId,
 		});
 
 		return res.json({
 			friendship: {
 				userId1: friendRequest.senderId,
-				userId2: friendRequest.receiverId
+				userId2: friendRequest.receiverId,
 			},
-			message: "Friend request accepted"
+			message: "Friend request accepted",
 		});
 	} catch (error) {
 		console.log(error);
@@ -129,7 +133,7 @@ export const rejectFriendRequest = async (
 		const receiverId = parseInt(req.userId);
 
 		const friendRequest = await FriendRequest.findOne({
-			where: { id: parseInt(requestId), receiverId, status: 'pending' }
+			where: { id: parseInt(requestId), receiverId, status: "pending" },
 		});
 
 		if (!friendRequest) {
@@ -137,7 +141,7 @@ export const rejectFriendRequest = async (
 		}
 
 		// Update request status to rejected
-		await friendRequest.update({ status: 'rejected' });
+		await friendRequest.update({ status: "rejected" });
 
 		return res.json({ message: "Friend request rejected" });
 	} catch (error) {
@@ -158,12 +162,12 @@ export const getPendingFriendRequests = async (
 		const pendingRequests = await FriendRequest.findAll({
 			include: [
 				{
-					as: 'sender',
-					attributes: ['id', 'username'],
-					model: User
-				}
+					as: "sender",
+					attributes: ["id", "username"],
+					model: User,
+				},
 			],
-			where: { receiverId: userId, status: 'pending' }
+			where: { receiverId: userId, status: "pending" },
 		});
 
 		return res.json({ pendingRequests });
@@ -185,12 +189,12 @@ export const getSentFriendRequests = async (
 		const sentRequests = await FriendRequest.findAll({
 			include: [
 				{
-					as: 'receiver',
-					attributes: ['id', 'username'],
-					model: User
-				}
+					as: "receiver",
+					attributes: ["id", "username"],
+					model: User,
+				},
 			],
-			where: { senderId: userId, status: 'pending' }
+			where: { senderId: userId, status: "pending" },
 		});
 
 		return res.json({ sentRequests });
@@ -209,22 +213,31 @@ export const getFriendsList = async (
 	try {
 		const userId = parseInt(req.userId);
 
-		const user = await User.findByPk(userId, {
-			include: [
-				{
-					as: 'friends',
-					attributes: ['id', 'username'],
-					model: User,
-					through: { attributes: [] }
-				}
-			]
+		// Find all friendships where the user is either userId1 or userId2
+		const friendships = await Friendship.findAll({
+			where: {
+				[Op.or]: [{ userId1: userId }, { userId2: userId }],
+			},
 		});
 
-		if (!user) {
-			return res.status(404).json({ error: "User not found" });
-		}
+		// Extract friend IDs (the other user in each friendship)
+		const friendIds = friendships.map((friendship) =>
+			friendship.userId1 === userId
+				? friendship.userId2
+				: friendship.userId1
+		);
 
-		return res.json({ friends: user.friends });
+		// Get friend user details
+		const friends = await User.findAll({
+			where: {
+				id: {
+					[Op.in]: friendIds,
+				},
+			},
+			attributes: ["id", "username"],
+		});
+
+		return res.json({ friends });
 	} catch (error) {
 		console.log(error);
 		return res.status(500).json({ error: "Internal server error" });
@@ -245,9 +258,9 @@ export const removeFriend = async (
 			where: {
 				[Op.or]: [
 					{ userId1: userId, userId2: parseInt(friendId) },
-					{ userId1: parseInt(friendId), userId2: userId }
-				]
-			}
+					{ userId1: parseInt(friendId), userId2: userId },
+				],
+			},
 		});
 
 		if (!friendship) {
@@ -259,14 +272,14 @@ export const removeFriend = async (
 
 		// Update any existing friend request to rejected
 		await FriendRequest.update(
-			{ status: 'rejected' },
+			{ status: "rejected" },
 			{
 				where: {
 					[Op.or]: [
 						{ receiverId: parseInt(friendId), senderId: userId },
-						{ receiverId: userId, senderId: parseInt(friendId) }
-					]
-				}
+						{ receiverId: userId, senderId: parseInt(friendId) },
+					],
+				},
 			}
 		);
 

@@ -9,6 +9,10 @@ class Server extends Model {
 
 Server.init(
 	{
+		createdAt: {
+			allowNull: false,
+			type: DataTypes.DATE,
+		},
 		id: {
 			allowNull: false,
 			autoIncrement: true,
@@ -18,6 +22,10 @@ Server.init(
 		name: {
 			allowNull: false,
 			type: DataTypes.STRING,
+		},
+		updatedAt: {
+			allowNull: false,
+			type: DataTypes.DATE,
 		},
 	},
 	{

@@ -10,6 +10,10 @@ class Membership extends Model {
 
 Membership.init(
 	{
+		createdAt: {
+			allowNull: false,
+			type: DataTypes.DATE,
+		},
 		id: {
 			allowNull: false,
 			autoIncrement: true,
@@ -25,6 +29,10 @@ Membership.init(
 			allowNull: false,
 			references: { key: "id", model: "Servers" },
 			type: DataTypes.INTEGER,
+		},
+		updatedAt: {
+			allowNull: false,
+			type: DataTypes.DATE,
 		},
 		userId: {
 			allowNull: false,

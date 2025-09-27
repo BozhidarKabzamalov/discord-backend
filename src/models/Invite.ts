@@ -15,6 +15,10 @@ Invite.init(
 			type: DataTypes.STRING,
 			unique: true,
 		},
+		createdAt: {
+			allowNull: false,
+			type: DataTypes.DATE,
+		},
 		id: {
 			allowNull: false,
 			autoIncrement: true,
@@ -25,6 +29,10 @@ Invite.init(
 			allowNull: false,
 			references: { key: "id", model: "Servers" },
 			type: DataTypes.INTEGER,
+		},
+		updatedAt: {
+			allowNull: false,
+			type: DataTypes.DATE,
 		},
 	},
 	{

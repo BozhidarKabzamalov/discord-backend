@@ -9,6 +9,10 @@ class Role extends Model {
 
 Role.init(
 	{
+		createdAt: {
+			allowNull: false,
+			type: DataTypes.DATE,
+		},
 		id: {
 			allowNull: false,
 			autoIncrement: true,
@@ -18,6 +22,10 @@ Role.init(
 		name: {
 			allowNull: false,
 			type: DataTypes.ENUM("owner", "admin", "member"),
+		},
+		updatedAt: {
+			allowNull: false,
+			type: DataTypes.DATE,
 		},
 	},
 	{
