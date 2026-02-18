@@ -3,112 +3,109 @@ import { Request, Response } from "express";
 import Channel from "../models/Channel";
 import Server from "../models/Server";
 
-interface createChannelRequestBodyType {
-	name: string;
-	type: "text" | "voice";
-}
-
-interface updateChannelRequestBodyType {
-	name: string;
+interface createUpdateChannelRequestBodyType {
+    name: string;
 }
 
 export const createChannel = async (
-	req: Request<{ serverId: number }, null, createChannelRequestBodyType>,
-	res: Response
+    req: Request<
+        { serverId: number },
+        null,
+        createUpdateChannelRequestBodyType
+    >,
+    res: Response,
 ) => {
-	try {
-		const { name, type } = req.body;
-		const { categoryId, serverId } = req.params;
+    try {
+        const { name } = req.body;
+        const { categoryId, serverId } = req.params;
 
-		if (!name) {
-			return res.status(400).json({ error: "Missing required fields" });
-		}
+        if (!name) {
+            return res.status(400).json({ error: "Missing required fields" });
+        }
 
-		if (!["text", "voice"].includes(type)) {
-			return res.status(400).json({ error: "Invalid channel type" });
-		}
+        const server = await Server.findByPk(serverId);
 
-		const server = await Server.findByPk(serverId);
+        if (!server) {
+            return res.status(404).json({ error: "Server not found" });
+        }
 
-		if (!server) {
-			return res.status(404).json({ error: "Server not found" });
-		}
+        const channel = await Channel.create({
+            categoryId,
+            name,
+        });
 
-		const channel = await Channel.create({
-			categoryId,
-			name,
-			type,
-		});
+        const createdChannel = await Channel.findByPk(channel.id);
 
-		const createdChannel = await Channel.findByPk(channel.id);
-
-		return res
-			.status(201)
-			.json({
-				channel: createdChannel,
-				message: "Channel created successfully",
-			});
-	} catch (error) {
-		console.error("Error creating channel:", error);
-		return res.status(500).json({ error: "Internal server error" });
-	}
+        return res.status(201).json({
+            channel: createdChannel,
+            message: "Channel created successfully",
+        });
+    } catch (error) {
+        console.error("Error creating channel:", error);
+        return res.status(500).json({ error: "Internal server error" });
+    }
 };
 
 export const deleteChannel = async (req: Request, res: Response) => {
-	try {
-		const { channelId } = req.params;
+    try {
+        const { channelId } = req.params;
 
-		if (!channelId) {
-			return res.status(400).json({ error: "Channel ID is required" });
-		}
+        if (!channelId) {
+            return res.status(400).json({ error: "Channel ID is required" });
+        }
 
-		const channel = await Channel.findByPk(channelId);
+        const channel = await Channel.findByPk(channelId);
 
-		if (!channel) {
-			return res.status(404).json({ error: "Channel not found" });
-		}
+        if (!channel) {
+            return res.status(404).json({ error: "Channel not found" });
+        }
 
-		await channel.destroy();
+        await channel.destroy();
 
-		return res.status(200).json({ message: "Channel has been deleted" });
-	} catch (error) {
-		console.error("Error deleting channel:", error);
-		return res.status(500).json({ error: "Internal server error" });
-	}
+        return res.status(200).json({ message: "Channel has been deleted" });
+    } catch (error) {
+        console.error("Error deleting channel:", error);
+        return res.status(500).json({ error: "Internal server error" });
+    }
 };
 
 export const updateChannel = async (
-	req: Request<{ channelId: number }, null, updateChannelRequestBodyType>,
-	res: Response
+    req: Request<
+        { channelId: number },
+        null,
+        createUpdateChannelRequestBodyType
+    >,
+    res: Response,
 ) => {
-	try {
-		const { channelId } = req.params;
-		const { name } = req.body;
+    try {
+        const { channelId } = req.params;
+        const { name } = req.body;
 
-		if (!channelId) {
-			return res.status(400).json({ error: "Channel ID is required" });
-		}
+        if (!channelId) {
+            return res.status(400).json({ error: "Channel ID is required" });
+        }
 
-		if (!name) {
-			return res.status(400).json({ error: "No fields to update" });
-		}
+        if (!name) {
+            return res.status(400).json({ error: "No fields to update" });
+        }
 
-		const channel = await Channel.findByPk(channelId);
+        const channel = await Channel.findByPk(channelId);
 
-		if (!channel) {
-			return res.status(404).json({ error: "Channel not found" });
-		}
+        if (!channel) {
+            return res.status(404).json({ error: "Channel not found" });
+        }
 
-		const updateData: { name?: string; type?: "text" | "voice" } = {};
-		if (name) updateData.name = name;
+        const updateData: { name?: string } = {};
 
-		await channel.update(updateData);
+        if (name) updateData.name = name;
 
-		const updatedChannel = await Channel.findByPk(channelId);
+        await channel.update(updateData);
 
-		return res.status(200).json(updatedChannel);
-	} catch (error) {
-		console.error("Error updating channel:", error);
-		return res.status(500).json({ error: "Internal server error" });
-	}
+        const updatedChannel = await Channel.findByPk(channelId);
+
+        return res.status(200).json(updatedChannel);
+    } catch (error) {
+        console.error("Error updating channel:", error);
+        return res.status(500).json({ error: "Internal server error" });
+    }
 };
